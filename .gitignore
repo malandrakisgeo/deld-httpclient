@@ -1,0 +1,8 @@
+#IntelliJ
+*.idea/
+target/
+./git/
+
+
+# Compiled class file
+*.class
