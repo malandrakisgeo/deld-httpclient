@@ -20,20 +20,17 @@ public class Request<T> {
 
     private String traceId; //In case several requests are interdependent or related
 
-    private HashMap<String, String> headers; //TODO: Switch to CaseInsensitiveHashMap
+    private String requestId; //TODO: If a user chooses so, each request will be assigned an id for debug purposes
 
-    private HashMap<String, String> queryParameters;
+    private HashMap<String, String> headers = new HashMap<String, String>(); //TODO: Switch to CaseInsensitiveHashMap
+
+    private HashMap<String, String> queryParameters = new HashMap<String, String>(); //TODO: Switch to CaseInsensitiveHashMap
 
     public Request(T t) {
         this.body = t;
-        this.headers = new HashMap<String, String>();
-        this.queryParameters = new HashMap<String, String>(); //TODO: Doesn't seem to prevent nullpointers. Why?
     }
 
     public Request() {
-        this.headers = new HashMap<String, String>();
-        this.queryParameters = new HashMap<String, String>();
-
     }
 
     public enum Method {

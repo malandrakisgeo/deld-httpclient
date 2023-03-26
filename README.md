@@ -29,7 +29,7 @@ public interface ExampleService {
     @QueryParam(parameterName = "includeData", value = "all")
     public Response<MyObject> getData(@QueryParam(parameterName = "excludeData") String toBeExcluded);
 
-    @GET(url = "endpoint2") //When using "http://examplehost.com" as a baseURL
+    @GET(url = "endpoint2") //When using "http://examplehost.com/" as baseURL
     @DefaultHeader(headerName = "Accept", value = "application/octet-stream")  
     public Response<InputStream> getFile(); 
 
@@ -45,11 +45,24 @@ The only code necessary afterwards is a Procuder method for the Interface as a b
 public class ProducerClass {
     @Produces //javax.enterprise.inject.Produces
     ExampleService producerExample (){
-        return (ExampleService)  new DELDBuilder().setBaseURL("http://examplehost.com").forService(ExampleService.class);
+        return (ExampleService)  new DELDBuilder().setBaseURL("http://examplehost.com/").forService(ExampleService.class);
+    }
+}
+
+```
+Or, if using Spring Boot: 
+
+```java
+@Configuration
+public class ProducerClass {
+    @Bean //org.springframework.context.annotation.Bean
+    public TestService testServiceBean() {
+        return (TestService)  new DELDBuilder().setBaseURL("http://examplehost.com/").forService(TestService.class);
     }
 }
 ```
-The Service can be Injected on other components using @Inject (or @Autowired).
+
+The Service can be injected on other components using @Inject (or @Autowired).
 
 DELD takes care of implementing the Service-interface.
 

@@ -19,7 +19,9 @@ public class HeaderUtils {
                 .filter(annotation -> annotation instanceof DefaultHeader)
                 .toList();
 
-        req.setHeaders(HeaderUtils.headerListToHashMap(headers));
+        if(headers.size() > 0){
+            req.getHeaders().putAll(HeaderUtils.headerListToHashMap(headers));
+        }
 
     }
 

@@ -18,14 +18,16 @@ public class DELDBuilder {
 
     private String baseURL;
 
-    private ArrayList<Object> objectProxies = new ArrayList<>();
-
     private HashMap<Class, Object> interfaceProxyList = new HashMap<>();
 
 
     private DELDClient deldClientInstance;
 
-    DELDLogger logger;
+    private DELDLogger logger;
+
+    private boolean debug = false;
+
+    private Method errorCallbackMethod;  //TODO: add feature
 
 
     public DELDBuilder() {
@@ -38,12 +40,20 @@ public class DELDBuilder {
         return this.interfaceProxyList.get(service);
     }
 
+    public DELDBuilder debugMode(){
+        this.debug = true;
+        return this;
+    }
+
+    /*public void errorCallbackMethod(Method errorHandler){
+        this.errorCallbackMethod = errorHandler;
+    }*/
+
     public DELDBuilder addService(Class service) {
         this.logger = new DELDLogger();
 
         if (!service.isInterface()) {
-            System.out.printf("Class should be interface!"); //TODO: Add exception
-            System.exit(247);
+            throw new RuntimeException("Class " + service.getName() + " should be interface!");
         }
 
         Arrays.stream(service.getMethods()).forEach(method -> {
@@ -64,9 +74,11 @@ public class DELDBuilder {
     }
 
     public DELDClient build() {
-        DELDClient deldClient = new DELDClient(baseURL, interfaceProxyList);
-        this.deldClientInstance = deldClient;
-        return deldClient;
+        if(deldClientInstance == null){
+            DELDClient deldClient = new DELDClient(baseURL, interfaceProxyList);
+            this.deldClientInstance = deldClient;
+        }
+        return this.deldClientInstance;
     }
 
     public DELDBuilder setBaseURL(String str) {
@@ -173,7 +185,14 @@ public class DELDBuilder {
 
                 var request = RequestUtils.prepareHttpRequest(req);
 
-                return deldClientInstance.sendRequest(request, retType);
+                var response = deldClientInstance.sendRequest(request, retType);
+
+                if(debug){
+                    response.setAssociatedRequestId(req.getRequestId());
+                    //TODO: Add a debug feature.
+                }
+
+                return response;
             }
         };
 

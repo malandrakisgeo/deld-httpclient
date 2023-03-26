@@ -15,7 +15,7 @@ public final class DELDClient {
 
     private String baseURL;
 
-    public HashMap<Class, Object> interfaceProxyList = new HashMap<>();
+    public HashMap<Class, Object> interfaceProxyList;
 
     public DELDClient(String baseURL, HashMap<Class, Object> interfaceProxyList) {
         this.baseURL = baseURL;
@@ -31,7 +31,7 @@ public final class DELDClient {
         this.baseURL = baseURL; //TODO: Set if not null, else warning or exception
     }
 
-    protected Response<?> sendRequest( HttpRequest request, Class<?> returnType) throws Exception {
+    protected Response<?> sendRequest(HttpRequest request, Class<?> returnType) throws Exception {
         HttpResponse<?> clientResp;
         Response<?> response;
 
@@ -60,7 +60,7 @@ public final class DELDClient {
         }
         response = new Response<>(obj);
 
-        response.setHttpstatus(clientResp.statusCode());
+        response.setHttpStatus(clientResp.statusCode());
         headers.putAll(HeaderUtils.httpHeadersToHasgMap(clientResp.headers().map()));
         response.setHeaders(headers);
 

@@ -20,6 +20,14 @@ public class DELDLogger {
 
 
     public void printWarning(String warn) {
-            System.out.println(ANSI_RED + "DELD Warning: " + warn + ANSI_RESET);
+            System.out.println(ANSI_YELLOW + "DELD Warning: " + warn + ANSI_RESET);
+    }
+
+    public void printError(String error) {
+        System.out.println(ANSI_RED + "DELD Error: " + error + ANSI_RESET);
+    }
+
+    public void printDebug(String debugInfo) {
+        System.out.println(ANSI_WHITE + "DELD Debug info: " + debugInfo + ANSI_RESET);
     }
 }

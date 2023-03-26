@@ -19,7 +19,10 @@ public class QueryUtils {
         var methodGeneralParams = Arrays.stream(method.getAnnotations())
                 .filter(annotation -> annotation instanceof QueryParam)
                 .toList();
-        req.setQueryParameters(QueryUtils.queryListToHashMap(methodGeneralParams));
+
+        if(methodGeneralParams.size() > 0){
+            req.getQueryParameters().putAll(QueryUtils.queryListToHashMap(methodGeneralParams));
+        }
 
         Arrays.stream(method.getParameters())
                 .filter(parameter -> parameter.getAnnotation(QueryParam.class) != null)
