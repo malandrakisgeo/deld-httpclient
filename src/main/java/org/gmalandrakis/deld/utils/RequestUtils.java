@@ -10,8 +10,7 @@ import java.util.function.Supplier;
 
 public class RequestUtils {
 
-
-    public static HttpRequest prepareHttpRequest(Request<?> req) throws Exception {
+    public static HttpRequest prepareHttpRequest(Request<?> req) {
         var uri = URI.create(req.getUrl());
 
         if(req.getQueryParameters()!= null && req.getQueryParameters().size() > 0){

@@ -95,7 +95,7 @@ public class HeaderUtils {
         if (req == null || req.headers() == null) {
             return false;
         }
-        return (req.headers().firstValue("content-Type").isPresent() && req.headers().firstValue("content-Type").get().equalsIgnoreCase(type))
+        return (req.headers().firstValue("content-type").isPresent() && req.headers().firstValue("content-type").get().equalsIgnoreCase(type))
                 || (req.headers().firstValue("Content-Type").isPresent() && req.headers().firstValue("Content-Type").get().equalsIgnoreCase(type));
 
     }
@@ -104,16 +104,14 @@ public class HeaderUtils {
         if (req == null || req.getHeaders() == null) {
             return false;
         }
-        return (req.getHeaders().get("Accept") != null && req.getHeaders().get("Accept").equalsIgnoreCase(type))
-                || (req.getHeaders().get("accept") != null && req.getHeaders().get("accept").equalsIgnoreCase(type));
+        return (req.getHeaders().get("Accept") != null && req.getHeaders().get("Accept").equalsIgnoreCase(type));
     }
 
     public static boolean hasContentTypeHeader(Request<?> req, String type) {
         if (req == null || req.getHeaders() == null) {
             return false;
         }
-        return (req.getHeaders().get("Content-Type") != null && req.getHeaders().get("Content-Type").equalsIgnoreCase(type))
-                || (req.getHeaders().get("content-type") != null && req.getHeaders().get("content-type").equalsIgnoreCase(type));
+        return (req.getHeaders().get("Content-Type") != null && req.getHeaders().get("Content-Type").equalsIgnoreCase(type));
     }
 
 }

@@ -1,7 +1,9 @@
 package org.gmalandrakis.deld;
 
+import org.gmalandrakis.deld.core.DELDBuilder;
 import org.gmalandrakis.deld.core.DELDClient;
 import org.gmalandrakis.deld.logging.DELDLogger;
+import org.gmalandrakis.deld.model.CaseInsensitiveHashMap;
 import org.gmalandrakis.deld.model.Request;
 import org.gmalandrakis.deld.model.Response;
 import org.gmalandrakis.deld.utils.DELDObjectConverter;
@@ -17,6 +19,7 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Objects;
 
 /**
  * Unit test for simple App.
@@ -144,8 +147,40 @@ public class AppTest {
         req.getHeaders().put("Content-Type", "application/octet-stream");
         req.setUrl("https://www.baeldung.com/convert-file-to-input-stream");
         req.setHttpMethod(Request.Method.POST);
-        DELDClient deldClient = new DELDClient(null, null);
 
-       // deldClient.prepareHttpRequest(req);
+       // deldClient.p
+        //repareHttpRequest(req);
     }
+
+
+
+    @Test
+    public void caseInsensiviteTest() throws Exception {
+        CaseInsensitiveHashMap  queryParameters = new CaseInsensitiveHashMap();
+        queryParameters.put("StRinG1", "StrInG2");
+        var a = queryParameters.get("string1");
+        assert(Objects.equals(a, "StrInG2"));
+
+
+        // deldClient.prepareHttpRequest(req);
+    }
+
+    @Test
+    public void invocationhandlerTest(){
+        var test  = (TestService) new DELDBuilder().forService(TestService.class);
+       // test.getUpdatedCustomer();
+        test.getTrue();
+        //var a = test.hashCode();
+       // System.out.println(a);
+
+    }
+
+
+
+
+
+
+
+
+
 }

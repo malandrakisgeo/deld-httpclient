@@ -22,9 +22,9 @@ public class Request<T> {
 
     private String requestId; //TODO: If a user chooses so, each request will be assigned an id for debug purposes
 
-    private HashMap<String, String> headers = new HashMap<String, String>(); //TODO: Switch to CaseInsensitiveHashMap
+    private CaseInsensitiveHashMap<String, String>  headers = new CaseInsensitiveHashMap<String, String> ();
 
-    private HashMap<String, String> queryParameters = new HashMap<String, String>(); //TODO: Switch to CaseInsensitiveHashMap
+    private CaseInsensitiveHashMap<String, String>  queryParameters = new CaseInsensitiveHashMap<String, String> ();
 
     public Request(T t) {
         this.body = t;

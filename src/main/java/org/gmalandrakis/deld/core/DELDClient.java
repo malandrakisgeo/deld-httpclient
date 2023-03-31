@@ -1,7 +1,11 @@
 package org.gmalandrakis.deld.core;
 
 
+import lombok.Data;
+import lombok.Generated;
+import org.gmalandrakis.deld.model.AsyncResponse;
 import org.gmalandrakis.deld.model.Response;
+import org.gmalandrakis.deld.model.ServiceProxyObject;
 import org.gmalandrakis.deld.utils.DELDObjectConverter;
 import org.gmalandrakis.deld.utils.HeaderUtils;
 
@@ -10,25 +14,32 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+@Generated
+@Data
 public final class DELDClient {
 
-    private String baseURL;
 
-    public HashMap<Class, Object> interfaceProxyList;
+    private HashMap<Class, ServiceProxyObject> interfaceProxyList;
 
-    public DELDClient(String baseURL, HashMap<Class, Object> interfaceProxyList) {
-        this.baseURL = baseURL;
+    public DELDClient(HashMap<Class, ServiceProxyObject> interfaceProxyList) {
         this.interfaceProxyList = interfaceProxyList;
+    }
+
+    public DELDClient() {
 
     }
 
-    public String getBaseURL() {
-        return baseURL;
-    }
 
-    public void setBaseURL(String baseURL) {
-        this.baseURL = baseURL; //TODO: Set if not null, else warning or exception
+    protected AsyncResponse<?> sendAsync(HttpRequest request, Class<?> returnType) throws Exception {
+         ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        /*
+            Coming soon!
+        */
+        return null;
     }
 
     protected Response<?> sendRequest(HttpRequest request, Class<?> returnType) throws Exception {
@@ -68,7 +79,7 @@ public final class DELDClient {
 
     }
 
-    private boolean isErrorCode(int httpStatus){
+    private boolean isErrorCode(int httpStatus) {
         return String.valueOf(httpStatus).startsWith("4") || String.valueOf(httpStatus).startsWith("5");
     }
 

@@ -4,89 +4,74 @@ import org.gmalandrakis.deld.annotations.*;
 import org.gmalandrakis.deld.exception.IncompatibleAnnotationsException;
 import org.gmalandrakis.deld.exception.MultipleBodiesException;
 import org.gmalandrakis.deld.logging.DELDLogger;
+import org.gmalandrakis.deld.model.AsyncResponse;
 import org.gmalandrakis.deld.model.Request;
+import org.gmalandrakis.deld.model.ServiceProxyObject;
 import org.gmalandrakis.deld.utils.HeaderUtils;
 import org.gmalandrakis.deld.utils.QueryUtils;
 import org.gmalandrakis.deld.utils.RequestUtils;
 
 import java.lang.reflect.*;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
 public class DELDBuilder {
 
-    private String baseURL;
-
-    private HashMap<Class, Object> interfaceProxyList = new HashMap<>();
-
+    private HashMap<Class, ServiceProxyObject> interfaceProxyList = new HashMap<>();
 
     private DELDClient deldClientInstance;
 
     private DELDLogger logger;
-
-    private boolean debug = false;
 
     private Method errorCallbackMethod;  //TODO: add feature
 
 
     public DELDBuilder() {
         this.logger = new DELDLogger();
+        this.deldClientInstance = new DELDClient();
     }
 
-    public Object forService(Class service){
+    public Object forService(Class service) {
         this.addService(service);
-        this.build();
-        return this.interfaceProxyList.get(service);
+        return this.interfaceProxyList.get(service).getProxyObject();
     }
 
-    public DELDBuilder debugMode(){
-        this.debug = true;
-        return this;
-    }
-
-    /*public void errorCallbackMethod(Method errorHandler){
-        this.errorCallbackMethod = errorHandler;
-    }*/
 
     public DELDBuilder addService(Class service) {
-        this.logger = new DELDLogger();
-
         if (!service.isInterface()) {
             throw new RuntimeException("Class " + service.getName() + " should be interface!");
+        }
+        if (interfaceProxyList.get(service) != null) {
+            return this;
         }
 
         Arrays.stream(service.getMethods()).forEach(method -> {
             try {
-                annotationFinder(method);
+                annotationChecks(method);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
+        var baseUrl = Arrays.stream(service.getAnnotations())
+                .filter(annotation -> annotation instanceof BaseURL)
+                .findAny();
 
         var obj = Proxy.newProxyInstance(service.getClassLoader(),
                 new java.lang.Class[]{service},
-                this.createInvocationHandler()); //TODO: Make sure that the invocationHandler is called only on unimplemented methods (not e.g. hashCode)
+                this.createInvocationHandler());
 
-        interfaceProxyList.put(service, obj);
-
-        return this;
-    }
-
-    public DELDClient build() {
-        if(deldClientInstance == null){
-            DELDClient deldClient = new DELDClient(baseURL, interfaceProxyList);
-            this.deldClientInstance = deldClient;
+        ServiceProxyObject serviceProxyObject = new ServiceProxyObject();
+        serviceProxyObject.setProxyObject(obj);
+        if (baseUrl.isPresent() && !((BaseURL) baseUrl.get()).url().isBlank()) {
+            serviceProxyObject.setBaseUrl(((BaseURL) baseUrl.get()).url());
         }
-        return this.deldClientInstance;
-    }
 
-    public DELDBuilder setBaseURL(String str) {
-        this.baseURL = str;
+        interfaceProxyList.put(service, serviceProxyObject);
+
         return this;
     }
 
-    protected void annotationFinder(Method method) throws Exception {
+    protected void annotationChecks(Method method) throws Exception {
 
         var getAn = Arrays.stream(method.getAnnotations())
                 .filter(annotation -> annotation instanceof GET)
@@ -94,6 +79,10 @@ public class DELDBuilder {
         var postAn = Arrays.stream(method.getAnnotations())
                 .filter(annotation -> annotation instanceof POST)
                 .findAny();
+        var asyncAn = Arrays.stream(method.getAnnotations())
+                .filter(annotation -> annotation instanceof Async)
+                .findAny();
+
 
         if (getAn.isEmpty() && postAn.isEmpty()) {
             return;
@@ -101,6 +90,10 @@ public class DELDBuilder {
 
         if (getAn.isPresent() && postAn.isPresent()) {
             throw new IncompatibleAnnotationsException(method, getAn.get(), postAn.get());
+        }
+
+        if (asyncAn.isPresent() && !method.getReturnType().isInstance(new AsyncResponse<>())) {
+            throw new Exception("TODO: Add a message"); //TODO
         }
 
         var parameterAnnotationList = Arrays.stream(method.getParameters())
@@ -131,6 +124,17 @@ public class DELDBuilder {
         return new InvocationHandler() {
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                if (method.isDefault()) {
+                    return InvocationHandler.invokeDefault(proxy, method, args);
+                }
+                if (Modifier.isNative(method.getModifiers())) {
+                 /*
+                    TODO: Something about native methods.
+                  */
+                }
+                var proxyInstance = interfaceProxyList.get(method.getDeclaringClass());
+
+
                 var getAn = Arrays.stream(method.getAnnotations())
                         .filter(annotation -> annotation instanceof GET)
                         .findAny();
@@ -173,24 +177,19 @@ public class DELDBuilder {
 
                 if (getAn.isPresent()) {
                     var getRequest = (GET) getAn.get();
-                    req.setUrl(getRequest.fullUrl().length() > 1 ? getRequest.fullUrl() : deldClientInstance.getBaseURL().concat(getRequest.url()));
+                    req.setUrl(getRequest.fullUrl().length() > 1 ? getRequest.fullUrl() : proxyInstance.getBaseUrl().concat(getRequest.url()));
                     req.setHttpMethod(Request.Method.GET);
 
                 } else {
                     var postReq = (POST) postAn.get();
-                    req.setUrl(postReq.fullUrl().length() > 1 ? postReq.fullUrl() : deldClientInstance.getBaseURL().concat(postReq.url()));
+                    req.setUrl(postReq.fullUrl().length() > 1 ? postReq.fullUrl() : proxyInstance.getBaseUrl().concat(postReq.url()));
                     req.setHttpMethod(Request.Method.POST);
-
                 }
 
                 var request = RequestUtils.prepareHttpRequest(req);
 
                 var response = deldClientInstance.sendRequest(request, retType);
 
-                if(debug){
-                    response.setAssociatedRequestId(req.getRequestId());
-                    //TODO: Add a debug feature.
-                }
 
                 return response;
             }

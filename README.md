@@ -20,32 +20,35 @@ Suppose you want your application to store and retrieve data from a RESTful API 
 All you need to do is create an interface wherein each function corresponds to an endpoint. 
 The library provides annotations corresponding to HTTP Methods (e.g. @GET), Headers and QueryParameters
 (@DefaultHeader and @QueryParam respectively), request body (@Body), and Authentication (@Authentication). 
-An interface utilizing them would look like this: 
+An interface utilizing them would look like this:
 
 ```java
+import org.gmalandrakis.deld.annotations.BaseURL;
+
+@BaseURL(url = "http://baseurl.com/")
 public interface ExampleService {
-    @GET(fullUrl = "http://examplehost.com/endpoint1") 
+    @GET(fullUrl = "http://examplehost.com/endpoint1")
     @DefaultHeader(headerName = "Accept", value = "application/json")
     @QueryParam(parameterName = "includeData", value = "all")
     public Response<MyObject> getData(@QueryParam(parameterName = "excludeData") String toBeExcluded);
 
-    @GET(url = "endpoint2") //When using "http://examplehost.com/" as baseURL
-    @DefaultHeader(headerName = "Accept", value = "application/octet-stream")  
-    public Response<InputStream> getFile(); 
+    @GET(url = "endpoint2") //With the value of @BaseURL as a baseurl
+    @DefaultHeader(headerName = "Accept", value = "application/octet-stream")
+    public Response<InputStream> getFile();
 
     @POST(url = "endpoint3")
     @DefaultHeader(headerName = "Content-Type", value = "application/xml")
-    public Response<Object> postJson(@Body MyObject myObject); 
+    public Response<Object> postJson(@Body MyObject myObject);
 }
 ```
 
-The only code necessary afterwards is a Procuder method for the Interface as a bean, e.g.
+The only code necessary afterwards is a producer method for the Interface as a bean, e.g.
 
 ```java
 public class ProducerClass {
     @Produces //javax.enterprise.inject.Produces
     ExampleService producerExample (){
-        return (ExampleService)  new DELDBuilder().setBaseURL("http://examplehost.com/").forService(ExampleService.class);
+        return (ExampleService)  new DELDBuilder().forService(ExampleService.class);
     }
 }
 
@@ -57,7 +60,7 @@ Or, if using Spring Boot:
 public class ProducerClass {
     @Bean //org.springframework.context.annotation.Bean
     public TestService testServiceBean() {
-        return (TestService)  new DELDBuilder().setBaseURL("http://examplehost.com/").forService(TestService.class);
+        return (TestService)  new DELDBuilder().forService(TestService.class);
     }
 }
 ```
