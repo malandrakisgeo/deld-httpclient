@@ -7,11 +7,9 @@ import java.util.HashMap;
 
 @Generated
 @Data
-public class Response<T> {
+public class Response<T> implements DELDResponse<T> {
     T body;
-
     int httpStatus = 0;
-    private CaseInsensitiveHashMap<String, String>  headers= new CaseInsensitiveHashMap<String, String> ();
 
     private String associatedRequestId;
 
@@ -20,17 +18,11 @@ public class Response<T> {
     public Response(T obj){
         body=obj;
     }
-
+    public Response(){
+    }
     public boolean isFailed(){
         return String.valueOf(httpStatus).startsWith("4") || String.valueOf(httpStatus).startsWith("5");
     }
 
-    public void setHeaders(HashMap<String, String> headersHashMap){
-        this.headers.putAll(headersHashMap);
-    }
-
-    public void setHeaders(CaseInsensitiveHashMap<String, String> headers){
-        this.headers = headers;
-    }
 
 }

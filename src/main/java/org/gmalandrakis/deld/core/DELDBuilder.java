@@ -11,9 +11,12 @@ import org.gmalandrakis.deld.utils.HeaderUtils;
 import org.gmalandrakis.deld.utils.QueryUtils;
 import org.gmalandrakis.deld.utils.RequestUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public class DELDBuilder {
 
@@ -72,28 +75,30 @@ public class DELDBuilder {
     }
 
     protected void annotationChecks(Method method) throws Exception {
+        Supplier<Stream<Annotation>> streamSupplier =
+                () -> Stream.of(method.getAnnotations());
+        var serviceAnnotationsStream = Arrays.stream(method.getDeclaringClass().getAnnotations());
 
-        var getAn = Arrays.stream(method.getAnnotations())
-                .filter(annotation -> annotation instanceof GET)
-                .findAny();
-        var postAn = Arrays.stream(method.getAnnotations())
-                .filter(annotation -> annotation instanceof POST)
-                .findAny();
-        var asyncAn = Arrays.stream(method.getAnnotations())
+        var asyncAn = Stream.concat(streamSupplier.get(), serviceAnnotationsStream)
                 .filter(annotation -> annotation instanceof Async)
                 .findAny();
 
+        var an = streamSupplier.get()
+                .filter(annotation -> {
+                    return annotation instanceof POST || annotation instanceof GET
+                            || annotation instanceof PUT || annotation instanceof DELETE;
+                }).toList();
 
-        if (getAn.isEmpty() && postAn.isEmpty()) {
+        if (an.isEmpty()) {
             return;
         }
 
-        if (getAn.isPresent() && postAn.isPresent()) {
-            throw new IncompatibleAnnotationsException(method, getAn.get(), postAn.get());
+        if (an.size() > 1) {
+            throw new IncompatibleAnnotationsException(method);
         }
 
         if (asyncAn.isPresent() && !method.getReturnType().isInstance(new AsyncResponse<>())) {
-            throw new Exception("TODO: Add a message"); //TODO
+            throw new Exception("Error on "+ method.getName() +". Async methods must return AsyncResponnse<?>! ");
         }
 
         var parameterAnnotationList = Arrays.stream(method.getParameters())
@@ -104,8 +109,8 @@ public class DELDBuilder {
             throw new MultipleBodiesException(method);
         }
 
-        if (postAn.isPresent()) {
-            var contentType = Arrays.stream(method.getAnnotations())
+        if (an.get(0) instanceof POST) {
+            var contentType = streamSupplier.get()
                     .filter(annotation -> annotation instanceof DefaultHeader)
                     .filter((header -> {
                         DefaultHeader h = (DefaultHeader) header;
@@ -117,6 +122,7 @@ public class DELDBuilder {
             }
         }
 
+        //TODO: Add further controls for Async
     }
 
     private InvocationHandler createInvocationHandler() {
@@ -132,20 +138,16 @@ public class DELDBuilder {
                     TODO: Something about native methods.
                   */
                 }
+
                 var proxyInstance = interfaceProxyList.get(method.getDeclaringClass());
+                var serviceAnnotationsStream = Arrays.stream(method.getDeclaringClass().getAnnotations());
 
+                Supplier<Stream<Annotation>> methodAnnotationsStreamSupplier =
+                        () -> Stream.of(method.getAnnotations());
 
-                var getAn = Arrays.stream(method.getAnnotations())
-                        .filter(annotation -> annotation instanceof GET)
-                        .findAny();
-
-                var postAn = Arrays.stream(method.getAnnotations())
-                        .filter(annotation -> annotation instanceof POST)
-                        .findAny();
-
-                if (getAn.isEmpty() && postAn.isEmpty()) {
-                    return null;
-                }
+                var asyncAn = Stream.concat(methodAnnotationsStreamSupplier.get(), serviceAnnotationsStream)
+                        .filter(annotation -> annotation instanceof Async)
+                        .findAny(); //TODO: Add controls in case a service is marked as @Async, but a method as @Sync, or vice versa
 
                 var bodyArgument = Arrays.stream(method.getParameters())
                         .filter(parameter -> parameter.getAnnotation(Body.class) != null)
@@ -153,11 +155,37 @@ public class DELDBuilder {
 
                 Request<?> req;
 
+
                 if (bodyArgument.isPresent()) {
                     int i = Arrays.stream(method.getParameters()).toList().indexOf(bodyArgument.get());
                     req = new Request<>(args[i]);
                 } else {
                     req = new Request<>();
+                }
+
+                //TODO: Simplify
+                methodAnnotationsStreamSupplier.get().forEach(annotation -> {
+                    if (annotation instanceof DELETE) {
+                        var ann = (DELETE) annotation;
+                        req.setUrl(ann.fullUrl().length() > 1 ? ann.fullUrl() : proxyInstance.getBaseUrl().concat(ann.url()));
+                        req.setHttpMethod(Request.Method.DELETE);
+                    } else if (annotation instanceof PUT) {
+                        var ann = (PUT) annotation;
+                        req.setUrl(ann.fullUrl().length() > 1 ? ann.fullUrl() : proxyInstance.getBaseUrl().concat(ann.url()));
+                        req.setHttpMethod(Request.Method.PUT);
+                    } else if (annotation instanceof POST) {
+                        var ann = (POST) annotation;
+                        req.setUrl(ann.fullUrl().length() > 1 ? ann.fullUrl() : proxyInstance.getBaseUrl().concat(ann.url()));
+                        req.setHttpMethod(Request.Method.POST);
+                    } else if (annotation instanceof GET) {
+                        var ann = (GET) annotation;
+                        req.setUrl(ann.fullUrl().length() > 1 ? ann.fullUrl() : proxyInstance.getBaseUrl().concat(ann.url()));
+                        req.setHttpMethod(Request.Method.GET);
+                    }
+                });
+
+                if (req.getHttpMethod() == null || req.getHttpMethod().toString().isBlank()) {
+                    return null;
                 }
 
                 HeaderUtils.fixHeaders(req, method);
@@ -167,31 +195,20 @@ public class DELDBuilder {
                     Suppose we have a returnType like Response<SomeObject>.
                     We only want to parse the SomeObject-classtype as argument to the sendGetRequest method.
                     Hence the code below.
-
                     TODO: Find a more straightforward way to achieve this.
 
-                    var retType = Class.forName(Arrays.stream(((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()).toList().get(0).getTypeName());
-                  */
+                    var retType = Class.forName(Arrays.stream(((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()).toList().get(0).getTypeName());*/
 
                 var retType = (Class<?>) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
 
-                if (getAn.isPresent()) {
-                    var getRequest = (GET) getAn.get();
-                    req.setUrl(getRequest.fullUrl().length() > 1 ? getRequest.fullUrl() : proxyInstance.getBaseUrl().concat(getRequest.url()));
-                    req.setHttpMethod(Request.Method.GET);
-
-                } else {
-                    var postReq = (POST) postAn.get();
-                    req.setUrl(postReq.fullUrl().length() > 1 ? postReq.fullUrl() : proxyInstance.getBaseUrl().concat(postReq.url()));
-                    req.setHttpMethod(Request.Method.POST);
-                }
 
                 var request = RequestUtils.prepareHttpRequest(req);
 
-                var response = deldClientInstance.sendRequest(request, retType);
+                if (asyncAn.isPresent()) {
+                    return deldClientInstance.handleAsync(request, retType);
+                }
+                return deldClientInstance.handleSync(request, retType);
 
-
-                return response;
             }
         };
 

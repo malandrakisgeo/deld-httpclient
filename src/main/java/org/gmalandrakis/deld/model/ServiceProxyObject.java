@@ -9,6 +9,7 @@ public class ServiceProxyObject {
 
     private Object proxyObject;
     private String baseUrl;
+    private CaseInsensitiveHashMap<String, String> commonHeaders;
 
     //TODO: Add stuff such as port, etc
 

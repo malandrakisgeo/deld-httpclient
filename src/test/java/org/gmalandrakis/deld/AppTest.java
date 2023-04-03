@@ -58,13 +58,13 @@ public class AppTest {
     public void shouldRunWithoutProblem() {
 
         try {
-            TestObject t = new TestObject();
+      /*      TestObject t = new TestObject();
             Object o = new Object();
             var ppa = t.getClass().cast(o);
 
             ppa.hashCode();
             this.testMeth(TestObject.class);
-
+*/
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -168,10 +168,11 @@ public class AppTest {
     @Test
     public void invocationhandlerTest(){
         var test  = (TestService) new DELDBuilder().forService(TestService.class);
-       // test.getUpdatedCustomer();
+        var as = test.getUpdatedCustomerAsync();
+        while(!as.isDone()){
+            System.out.println(as.hashCode());
+        }
         test.getTrue();
-        //var a = test.hashCode();
-       // System.out.println(a);
 
     }
 

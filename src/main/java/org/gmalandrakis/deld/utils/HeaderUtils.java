@@ -12,14 +12,14 @@ public class HeaderUtils {
 
 
     public static void fixHeaders(final Request<?> req, Method method) {
-        if(method == null || req == null)
+        if (method == null || req == null)
             return;
 
         var headers = Arrays.stream(method.getAnnotations())
                 .filter(annotation -> annotation instanceof DefaultHeader)
                 .toList();
 
-        if(headers.size() > 0){
+        if (headers.size() > 0) {
             req.getHeaders().putAll(HeaderUtils.headerListToHashMap(headers));
         }
 
@@ -56,13 +56,13 @@ public class HeaderUtils {
     }
 
 
-    public static HashMap<String, String>   httpHeadersToHasgMap(String[] headers) {
+    public static HashMap<String, String> httpHeadersToHashMap(String[] headers) {
         HashMap<String, String> hashMap = new HashMap<>();
         if (headers == null || headers.length == 0) {
             return null;
         }
 
-        for(int i=0; i<=headers.length; i++){
+        for (int i = 0; i <= headers.length; i++) {
             hashMap.put(headers[i], headers[++i]);
         }
 
@@ -70,25 +70,48 @@ public class HeaderUtils {
     }
 
 
-    public static HashMap<String, String>   httpHeadersToHasgMap(Map<String, List<String>> headerMap) {
+    public static HashMap<String, String> httpHeadersToHashMap(Map<String, List<String>> headerMap) {
         HashMap<String, String> hashMap = new HashMap<>();
         if (headerMap == null || headerMap.size() == 0) {
             return null;
         }
 
-        headerMap.forEach((map, list) ->{
-            list.forEach(value -> hashMap.put(map,value));
-
+        headerMap.forEach((map, list) -> {
+            if(list.size() > 1){
+                final String[] str = {new String()};
+                str[0] = str[0].concat(list.get(0));
+                list.forEach(partialHeader->{
+                    str[0] = str[0].concat(",").concat(partialHeader);  //in accordance to RFC 2616
+                });
+                hashMap.put(map, str[0]);
+            }else{
+                hashMap.put(map, list.get(0));
+            }
         });
 
         return hashMap;
     }
+
     public static boolean acceptHeader(HttpRequest req, String type) {
         if (req == null || req.headers() == null) {
             return false;
         }
         return (req.headers().firstValue("Accept").isPresent() && req.headers().firstValue("Accept").get().equalsIgnoreCase(type))
                 || (req.headers().firstValue("accept").isPresent() && req.headers().firstValue("accept").get().equalsIgnoreCase(type));
+    }
+
+    public static String accepts(HttpRequest req) {
+        if (req == null || req.headers() == null) {
+            return null;
+        }
+        if (req.headers().firstValue("Accept").isPresent()) {
+            return req.headers().firstValue("Accept").get();
+        } else if (req.headers().firstValue("accept").isPresent()) {
+            return req.headers().firstValue("accept").get();
+        } else {
+            return null;
+        }
+
     }
 
     public static boolean hasContentTypeHeader(HttpRequest req, String type) {
