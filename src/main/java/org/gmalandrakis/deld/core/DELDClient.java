@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 @Data
 public final class DELDClient {
 
-    ExecutorService executorService = Executors.newFixedThreadPool(3);
+    ExecutorService executorService = Executors.newFixedThreadPool(3); //TODO: Motivate this number or make it flexible.
     private HashMap<Class, ServiceProxyObject> interfaceProxyList;
     private HttpClient client = HttpClient.newBuilder().executor(executorService).connectTimeout(Duration.ofSeconds(5)).build(); //TODO: Let the user define the timeout
 

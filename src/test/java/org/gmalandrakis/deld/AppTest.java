@@ -54,76 +54,22 @@ public class AppTest {
     }
 
 
-    @Test
-    public void shouldRunWithoutProblem() {
-
-        try {
-      /*      TestObject t = new TestObject();
-            Object o = new Object();
-            var ppa = t.getClass().cast(o);
-
-            ppa.hashCode();
-            this.testMeth(TestObject.class);
-*/
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
 
     @Test
-    public void checkShit() {
-
-        try {
-            TestObject t = new TestObject();
-            t.getClass().getMethods();
-            var bb = Arrays.stream(t.getClass().getMethods()).toList();
-            var aaa = Arrays.stream(t.getClass().getMethods()).toList().get(0).getReturnType();
-            aaa.getName();
-
-            var dd = Arrays.stream(t.getClass().getDeclaredMethods()).toList();
-
-            var aada = t.getClass().getDeclaredMethod("testMethod");
-
-
-            var bool = aada.getReturnType().isInstance(InputStream.nullInputStream());
-
-
-            aada.hashCode();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    @Test
-    public void checkServgice() throws Exception {
+    public void debugToCheckTypes() throws Exception {
 
         var meth = TestService.class.getDeclaredMethod("getUpdatedCustomer");
-        var bb = meth.getGenericReturnType();
-        bb.hashCode();
+        var type = meth.getGenericReturnType();
 
         ParameterizedType f = (ParameterizedType) meth.getGenericReturnType();
-        var cc = f.getRawType();
+        var rawType = f.getRawType();
 
         Arrays.stream(((ParameterizedType) meth.getGenericReturnType()).getActualTypeArguments()).toList().get(0).getTypeName();
 
-        var dd = meth.getGenericReturnType().getTypeName();
-        dd.hashCode();
+        var typeName = meth.getGenericReturnType().getTypeName();
         var retType = Class.forName(Arrays.stream(((ParameterizedType) meth.getGenericReturnType()).getActualTypeArguments()).toList().get(0).getTypeName());
 
         retType.hashCode();
-    }
-
-    private void testMeth(Class<?> returnType) throws Exception {
-        Response<?> resp = new Response(returnType.getConstructor().newInstance());
-        resp.hashCode();
-
-        var bb = DELDObjectConverter.objectConverterJson("{\"field1\": \"fddf\"\n" +
-                "}", resp.getBody().getClass());
-        bb.hashCode();
-
     }
 
     @Test
@@ -148,40 +94,31 @@ public class AppTest {
         req.setUrl("https://www.baeldung.com/convert-file-to-input-stream");
         req.setHttpMethod(Request.Method.POST);
 
-       // deldClient.p
-        //repareHttpRequest(req);
+        // prepareHttpRequest(req);
     }
-
 
 
     @Test
     public void caseInsensiviteTest() throws Exception {
-        CaseInsensitiveHashMap  queryParameters = new CaseInsensitiveHashMap();
+        CaseInsensitiveHashMap queryParameters = new CaseInsensitiveHashMap();
         queryParameters.put("StRinG1", "StrInG2");
         var a = queryParameters.get("string1");
-        assert(Objects.equals(a, "StrInG2"));
+        assert (Objects.equals(a, "StrInG2"));
 
 
         // deldClient.prepareHttpRequest(req);
     }
 
     @Test
-    public void invocationhandlerTest(){
-        var test  = (TestService) new DELDBuilder().forService(TestService.class);
+    public void invocationhandlerTest() {
+        var test = (TestService) new DELDBuilder().forService(TestService.class);
         var as = test.getUpdatedCustomerAsync();
-        while(!as.isDone()){
+        while (!as.isDone()) {
             System.out.println(as.hashCode());
         }
         test.getTrue();
 
     }
-
-
-
-
-
-
-
 
 
 }
