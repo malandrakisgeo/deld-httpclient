@@ -76,11 +76,8 @@ while octet-stream must be used with Response<InputStream>  or Response<byte[]> 
 
 
 ## Future plans
-As of 3/2023, there is no intention of turning DELD-Httpclient to a fully-operational framework
-comparable to Feign or Spring's WebClient. 
-
-However, there is the intention of making it support Asynchronous communication.
-
+As of 12/2023, there is no intention of turning DELD-Httpclient to a fully-operational framework
+comparable to Feign or Spring's WebClient.
 
 ## Contributing
 
