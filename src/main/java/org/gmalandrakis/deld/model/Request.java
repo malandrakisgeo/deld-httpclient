@@ -4,13 +4,12 @@ import lombok.Data;
 import lombok.Generated;
 
 import java.sql.Timestamp;
-import java.util.HashMap;
 
 @Generated
 @Data
 public class Request<T> {
 
-    private Method httpMethod;
+    private HttpMethod httpMethod;
 
     private T body;
 
@@ -26,6 +25,8 @@ public class Request<T> {
 
     private CaseInsensitiveHashMap<String, String>  queryParameters = new CaseInsensitiveHashMap<String, String> ();
 
+    private HttpVersion version;
+
     public Request(T t) {
         this.body = t;
     }
@@ -33,11 +34,6 @@ public class Request<T> {
     public Request() {
     }
 
-    public enum Method {
-        GET,
-        POST,
-        PUT,
-        DELETE
-    }
+
 
 }

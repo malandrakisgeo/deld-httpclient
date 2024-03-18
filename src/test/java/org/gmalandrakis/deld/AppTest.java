@@ -1,11 +1,11 @@
 package org.gmalandrakis.deld;
 
+import org.gmalandrakis.deld.annotations.Async;
+import org.gmalandrakis.deld.annotations.Sync;
 import org.gmalandrakis.deld.core.DELDBuilder;
-import org.gmalandrakis.deld.core.DELDClient;
-import org.gmalandrakis.deld.logging.DELDLogger;
 import org.gmalandrakis.deld.model.CaseInsensitiveHashMap;
+import org.gmalandrakis.deld.model.HttpMethod;
 import org.gmalandrakis.deld.model.Request;
-import org.gmalandrakis.deld.model.Response;
 import org.gmalandrakis.deld.utils.DELDObjectConverter;
 import org.gmalandrakis.testobjects.TestObject;
 import org.gmalandrakis.testobjects.TestService;
@@ -20,6 +20,7 @@ import java.net.http.HttpRequest;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Objects;
+
 
 /**
  * Unit test for simple App.
@@ -58,8 +59,10 @@ public class AppTest {
     @Test
     public void debugToCheckTypes() throws Exception {
 
-        var meth = TestService.class.getDeclaredMethod("getUpdatedCustomer");
+        var meth = TestService.class.getDeclaredMethod("getUpdatedCustomerAsync");
         var type = meth.getGenericReturnType();
+        var asyncMethod = meth.getAnnotation(Async.class);
+        var syncMethod = meth.getAnnotation(Sync.class);
 
         ParameterizedType f = (ParameterizedType) meth.getGenericReturnType();
         var rawType = f.getRawType();
@@ -92,7 +95,7 @@ public class AppTest {
         req.setBody(a);
         req.getHeaders().put("Content-Type", "application/octet-stream");
         req.setUrl("https://www.baeldung.com/convert-file-to-input-stream");
-        req.setHttpMethod(Request.Method.POST);
+        req.setHttpMethod(HttpMethod.POST);
 
         // prepareHttpRequest(req);
     }
@@ -111,7 +114,7 @@ public class AppTest {
 
     @Test
     public void invocationhandlerTest() {
-        var test = (TestService) new DELDBuilder().forService(TestService.class);
+        var test = (TestService) new DELDBuilder().createService(TestService.class);
         var as = test.getUpdatedCustomerAsync();
         while (!as.isDone()) {
             System.out.println(as.hashCode());

@@ -5,15 +5,15 @@ import lombok.Generated;
 
 @Generated
 @Data
-public class ServiceProxyObject {
+public class ServiceProxyObject<T> {
 
-    private Object proxyObject;
+    private T proxyObject;
     private String baseUrl;
     private CaseInsensitiveHashMap<String, String> commonHeaders;
 
     //TODO: Add stuff such as port, etc
 
-    public Object setBaseUrl(String baseUrl) {
+    public T setBaseUrl(String baseUrl) {
         this.baseUrl = baseUrl;
         return proxyObject;
     }

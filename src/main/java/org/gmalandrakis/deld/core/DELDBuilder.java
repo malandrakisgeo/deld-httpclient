@@ -4,10 +4,7 @@ import org.gmalandrakis.deld.annotations.*;
 import org.gmalandrakis.deld.exception.IncompatibleAnnotationsException;
 import org.gmalandrakis.deld.exception.MultipleBodiesException;
 import org.gmalandrakis.deld.logging.DELDLogger;
-import org.gmalandrakis.deld.model.AsyncResponse;
-import org.gmalandrakis.deld.model.Request;
-import org.gmalandrakis.deld.model.Response;
-import org.gmalandrakis.deld.model.ServiceProxyObject;
+import org.gmalandrakis.deld.model.*;
 import org.gmalandrakis.deld.utils.HeaderUtils;
 import org.gmalandrakis.deld.utils.QueryUtils;
 import org.gmalandrakis.deld.utils.RequestUtils;
@@ -16,17 +13,16 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.function.Supplier;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class DELDBuilder {
 
-    private HashMap<Class, ServiceProxyObject> interfaceProxyList = new HashMap<>();
+    private final HashMap<Class<?>, ServiceProxyObject<?>> interfaceProxyList = new HashMap<>();
 
-    private DELDClient deldClientInstance;
+    private final DELDClient deldClientInstance;
 
-    private DELDLogger logger;
-
+    private final DELDLogger logger;
 
 
     public DELDBuilder() {
@@ -34,27 +30,31 @@ public class DELDBuilder {
         this.deldClientInstance = new DELDClient();
     }
 
-    public Object forService(Class service) {
-        this.addService(service);
-        return this.interfaceProxyList.get(service).getProxyObject();
+    public DELDBuilder(int threadsNeeded) {
+        this.logger = new DELDLogger();
+        this.deldClientInstance = new DELDClient(threadsNeeded);
     }
 
-    public DELDBuilder addService(Class service) {
+    public <T> T createService(Class<T> service) {
+        this.addServiceInternal(service);
+        return (T) this.interfaceProxyList.get(service).getProxyObject();
+    }
+
+    private void addServiceInternal(Class<?> service) {
         if (!service.isInterface()) {
             throw new RuntimeException("The class " + service.getName() + " should be an interface!");
         }
         if (interfaceProxyList.get(service) != null) {
-            return this;
+            return;
         }
-        var fnd = Arrays.stream(service.getAnnotations()).filter(annotation -> annotation instanceof Async).findAny();
-
+        var asyncan = service.getAnnotation(Async.class);
         Arrays.stream(service.getMethods()).forEach(method -> {
-            boolean isAsync = false; //effectively final parameter needed in lambda expression
-            if (fnd.isPresent()) {
-                isAsync = true;
+            boolean inAsyncClass = false; //effectively final parameter needed in lambda expression
+            if (asyncan != null) {
+                inAsyncClass = true;
             }
             try {
-                annotationChecks(method, isAsync);
+                annotationChecks(method, inAsyncClass);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -66,24 +66,18 @@ public class DELDBuilder {
 
         ServiceProxyObject serviceProxyObject = new ServiceProxyObject();
         serviceProxyObject.setProxyObject(obj);
-        var baseUrl = Arrays.stream(service.getAnnotations())
-                .filter(annotation -> annotation instanceof BaseURL)
-                .findAny();
 
-        if (baseUrl.isPresent() && !((BaseURL) baseUrl.get()).url().isBlank()) {
-            serviceProxyObject.setBaseUrl(((BaseURL) baseUrl.get()).url());
+        var baseUrlannotation = service.getAnnotation(BaseURL.class);
+        if (baseUrlannotation != null && !(baseUrlannotation).url().isBlank()) {
+            serviceProxyObject.setBaseUrl(((BaseURL) baseUrlannotation).url());
         }
         interfaceProxyList.put(service, serviceProxyObject);
 
-        return this;
     }
 
     protected void annotationChecks(Method method, boolean asyncService) throws Exception {
-        Supplier<Stream<Annotation>> streamSupplier =
-                () -> Stream.of(method.getAnnotations());
-        var st = streamSupplier.get();
-
-        var an = streamSupplier.get()
+        var annotationStream = Stream.of(method.getAnnotations());
+        var an = annotationStream
                 .filter(annotation -> annotation instanceof POST || annotation instanceof GET
                         || annotation instanceof PUT || annotation instanceof DELETE).toList();
 
@@ -95,23 +89,22 @@ public class DELDBuilder {
             throw new IncompatibleAnnotationsException(method);
         }
 
-        boolean asyncMethod = streamSupplier.get().anyMatch(annotation -> annotation instanceof Async);
-        boolean syncMethod = streamSupplier.get().anyMatch(annotation -> annotation instanceof Sync);
+        var asyncMethod = method.getAnnotation(Async.class);
+        var syncMethod = method.getAnnotation(Sync.class);
 
         //error if both @Sync and @Async are present in the same function
-        if(asyncMethod && syncMethod){
-            throw new IncompatibleAnnotationsException(method, streamSupplier.get().filter(annotation -> annotation instanceof Async).findFirst().get(), streamSupplier.get().filter(annotation -> annotation instanceof Sync).findFirst().get());
+        if (asyncMethod != null && syncMethod != null) {
+            throw new IncompatibleAnnotationsException(method, asyncMethod, syncMethod);
         }
 
-        if (!method.getReturnType().isInstance(new AsyncResponse<>()) &&( (asyncService && !syncMethod) || asyncMethod)) {
+        if (!method.getReturnType().isInstance(new AsyncResponse<>()) && ((asyncService && syncMethod != null) || asyncMethod != null)) {
             throw new Exception("Error on " + method.getName() + ". Async methods must return AsyncResponse<?>! ");
         }
 
-        if (syncMethod && !method.getReturnType().isInstance(new Response<>())) {
+        if (syncMethod != null && !method.getReturnType().isInstance(new Response<>())) {
             throw new Exception("Error on " + method.getName() + ". Sync methods must return Response<?>! ");
         }
-
-        var parameterAnnotationList = Arrays.stream(method.getParameters())
+        var parameterAnnotationList = Stream.of(method.getParameters())
                 .filter(parameter -> parameter.isAnnotationPresent(Body.class))
                 .toList();
 
@@ -120,14 +113,14 @@ public class DELDBuilder {
         }
 
         if (an.get(0) instanceof POST) {
-            var contentType = streamSupplier.get()
+            var contentType = Stream.of(method.getAnnotations())
                     .filter(annotation -> annotation instanceof DefaultHeader)
                     .filter((header -> {
                         DefaultHeader h = (DefaultHeader) header;
                         return h.headerName().equalsIgnoreCase("content-type"); //TODO: Set an enum list of acceptable headers.
                     })).findAny();
 
-            if (!contentType.isPresent()) {
+            if (contentType.isEmpty()) {
                 this.logger.printWarning("No Content-Type header set for POST request on method " + method.getName() + " application/json will be assumed");
             }
         }
@@ -141,21 +134,15 @@ public class DELDBuilder {
                 if (method.isDefault()) {
                     return InvocationHandler.invokeDefault(proxy, method, args);
                 }
-                if (Modifier.isNative(method.getModifiers())) {
-                 /*
+               /* if (Modifier.isNative(method.getModifiers())) {
                     TODO: Something about native methods.
-                  */
-                }
+                } */
 
                 var proxyInstance = interfaceProxyList.get(method.getDeclaringClass());
-                var serviceAnnotationsStream = Arrays.stream(method.getDeclaringClass().getAnnotations());
+                //  var serviceAnnotationsStream = Set.of(method.getDeclaringClass().getAnnotations());
 
-                Supplier<Stream<Annotation>> methodAnnotationsStreamSupplier =
-                        () -> Stream.of(method.getAnnotations());
-
-                var asyncAn = Stream.concat(methodAnnotationsStreamSupplier.get(), serviceAnnotationsStream)
-                        .filter(annotation -> annotation instanceof Async)
-                        .findAny();
+                Set<Annotation> methodAnnotations =
+                        Set.of(method.getAnnotations());
 
                 var bodyArgument = Arrays.stream(method.getParameters())
                         .filter(parameter -> parameter.getAnnotation(Body.class) != null)
@@ -171,23 +158,23 @@ public class DELDBuilder {
                 }
 
                 //TODO: Simplify
-                methodAnnotationsStreamSupplier.get().forEach(annotation -> {
+                methodAnnotations.forEach(annotation -> {
                     if (annotation instanceof DELETE) {
                         var ann = (DELETE) annotation;
                         req.setUrl(ann.fullUrl().length() > 1 ? ann.fullUrl() : proxyInstance.getBaseUrl().concat(ann.url()));
-                        req.setHttpMethod(Request.Method.DELETE);
+                        req.setHttpMethod(HttpMethod.DELETE);
                     } else if (annotation instanceof PUT) {
                         var ann = (PUT) annotation;
                         req.setUrl(ann.fullUrl().length() > 1 ? ann.fullUrl() : proxyInstance.getBaseUrl().concat(ann.url()));
-                        req.setHttpMethod(Request.Method.PUT);
+                        req.setHttpMethod(HttpMethod.PUT);
                     } else if (annotation instanceof POST) {
                         var ann = (POST) annotation;
                         req.setUrl(ann.fullUrl().length() > 1 ? ann.fullUrl() : proxyInstance.getBaseUrl().concat(ann.url()));
-                        req.setHttpMethod(Request.Method.POST);
+                        req.setHttpMethod(HttpMethod.POST);
                     } else if (annotation instanceof GET) {
                         var ann = (GET) annotation;
                         req.setUrl(ann.fullUrl().length() > 1 ? ann.fullUrl() : proxyInstance.getBaseUrl().concat(ann.url()));
-                        req.setHttpMethod(Request.Method.GET);
+                        req.setHttpMethod(HttpMethod.GET);
                     }
                 });
 
@@ -208,7 +195,7 @@ public class DELDBuilder {
 
                 var request = RequestUtils.prepareHttpRequest(req);
 
-                if (asyncAn.isPresent()) {
+                if (isAsync(method)) {
                     return deldClientInstance.handleAsync(request, retType);
                 }
                 return deldClientInstance.handleSync(request, retType);
@@ -216,5 +203,16 @@ public class DELDBuilder {
         };
     }
 
-    //https://stackoverflow.com/questions/1082850/java-reflection-create-an-implementing-class/9583681#9583681
+    private boolean isAsync(Method method) {
+        var asyncMethod = method.getAnnotation(Async.class);
+
+        if (asyncMethod != null) {
+            return true;
+        }
+        var asyncClass = method.getAnnotation(Async.class);
+        var syncMeth = method.getAnnotation(Sync.class);
+
+        return (asyncClass != null && syncMeth == null);
+    }
+
 }

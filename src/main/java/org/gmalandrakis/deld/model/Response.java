@@ -3,8 +3,6 @@ package org.gmalandrakis.deld.model;
 import lombok.Data;
 import lombok.Generated;
 
-import java.util.HashMap;
-
 @Generated
 @Data
 public class Response<T> implements DELDResponse<T> {
@@ -14,6 +12,8 @@ public class Response<T> implements DELDResponse<T> {
     private String associatedRequestId;
 
     private boolean failed;
+
+    private HttpVersion version;
 
     public Response(T obj){
         body=obj;

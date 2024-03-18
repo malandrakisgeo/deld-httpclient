@@ -6,7 +6,7 @@
 
   <groupId>org.gmalandrakis</groupId>
   <artifactId>DELD-httpclient</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.2-SNAPSHOT</version>
 
   <name>DELD-httpclient</name>
   <url>github.com/malandrakisgeo</url>

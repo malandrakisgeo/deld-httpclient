@@ -24,20 +24,24 @@ import java.util.concurrent.TimeUnit;
 @Data
 public final class DELDClient {
 
-    ExecutorService executorService = Executors.newFixedThreadPool(3); //TODO: Motivate this number or make it flexible.
-    private HashMap<Class, ServiceProxyObject> interfaceProxyList;
-    private HttpClient client = HttpClient.newBuilder().executor(executorService).connectTimeout(Duration.ofSeconds(5)).build(); //TODO: Let the user define the timeout
+    private ExecutorService executorService;
+    private HashMap<Class<?>, ServiceProxyObject> interfaceProxyList;
+    private HttpClient client;
 
-    public DELDClient(HashMap<Class, ServiceProxyObject> interfaceProxyList) {
-        this.interfaceProxyList = interfaceProxyList;
-    }
 
     public DELDClient() {
-
+         this(2);
     }
 
+    public DELDClient(int threadsNeeded) {
+        if (threadsNeeded < 1) {
+            throw new RuntimeException("At least one thread required.");
+        }
+        this.executorService = Executors.newFixedThreadPool(threadsNeeded);
+        this.client = HttpClient.newBuilder().executor(executorService).connectTimeout(Duration.ofSeconds(5)).build(); //TODO: Let the user define the timeout
+    }
 
-    protected DELDResponse<?> handleSync(HttpRequest request, Class<?> returnType) throws Exception {
+    DELDResponse<?> handleSync(HttpRequest request, Class<?> returnType) throws Exception {
         Response<?> response = new Response<>();
         HttpResponse.BodyHandler<?> properHandler = HttpResponse.BodyHandlers.ofString();
 
@@ -56,7 +60,7 @@ public final class DELDClient {
         return response;
     }
 
-    protected DELDResponse<?> handleAsync(HttpRequest request, Class<?> returnType) throws Exception {
+    DELDResponse<?> handleAsync(HttpRequest request, Class<?> returnType) throws Exception {
         AsyncResponse<?> asyncResponse = new AsyncResponse<>();
         HttpResponse.BodyHandler<?> properHandler = HttpResponse.BodyHandlers.ofString();
         if (HeaderUtils.acceptHeader(request, "application/octet-stream")) {

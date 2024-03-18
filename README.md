@@ -23,6 +23,7 @@ The library provides annotations corresponding to HTTP Methods (e.g. @GET), Head
 An interface utilizing them would look like this:
 
 ```java
+import org.gmalandrakis.deld.annotations.Async;
 import org.gmalandrakis.deld.annotations.BaseURL;
 
 @BaseURL(url = "http://baseurl.com/")
@@ -30,15 +31,16 @@ public interface ExampleService {
     @GET(fullUrl = "http://examplehost.com/endpoint1")
     @DefaultHeader(headerName = "Accept", value = "application/json")
     @QueryParam(parameterName = "includeData", value = "all")
-    public Response<MyObject> getData(@QueryParam(parameterName = "excludeData") String toBeExcluded);
+    Response<MyObject> getData(@QueryParam(parameterName = "excludeData") String toBeExcluded);
 
     @GET(url = "endpoint2") //With the value of @BaseURL as a baseurl
     @DefaultHeader(headerName = "Accept", value = "application/octet-stream")
-    public Response<InputStream> getFile();
+    Response<InputStream> getFile();
 
     @POST(url = "endpoint3")
     @DefaultHeader(headerName = "Content-Type", value = "application/xml")
-    public Response<Object> postJson(@Body MyObject myObject);
+    @Async
+    AsyncResponse<Object> postJson(@Body MyObject myObject);
 }
 ```
 
@@ -48,7 +50,7 @@ The only code necessary afterwards is a producer method for the Interface as a b
 public class ProducerClass {
     @Produces //javax.enterprise.inject.Produces
     ExampleService producerExample (){
-        return (ExampleService)  new DELDBuilder().forService(ExampleService.class);
+        return new DELDBuilder().createService(ExampleService.class);
     }
 }
 
@@ -59,20 +61,22 @@ Or, if using Spring Boot:
 @Configuration
 public class ProducerClass {
     @Bean //org.springframework.context.annotation.Bean
-    public TestService testServiceBean() {
-        return (TestService)  new DELDBuilder().forService(TestService.class);
+    public ExampleService testServiceBean() {
+        return new DELDBuilder(5).createService(ExampleService.class);  //You can even set the number of threads needed for concurrency (default: 2)
     }
 }
 ```
 
 The Service can be injected on other components using @Inject (or @Autowired).
-
-DELD takes care of implementing the Service-interface.
+DELD takes care of implementing the interface.
+You can use the same builder for multiple services, by defining the DELDBuilder as a bean itself.
 
 Unless explicitly specified, all "Content-Type" and "Accept" headers are assumed to be "application/json". 
 For the time being, it only works with "application/json", "application/xml", and "application/octet-stream", 
 with the former allowing all objects that can be converted from/to json (xml respectively) as in the Response type, 
-while octet-stream must be used with Response<InputStream>  or Response<byte[]> . 
+while octet-stream must be used with Response<InputStream>  or Response<byte[]> .
+
+Note that @Async methods (or any method in an @Async class not annotated with @Sync) must return AsyncResponse<T>.
 
 
 ## Future plans
