@@ -209,7 +209,7 @@ public class DELDBuilder {
         if (asyncMethod != null) {
             return true;
         }
-        var asyncClass = method.getAnnotation(Async.class);
+        var asyncClass = method.getDeclaringClass().getAnnotation(Async.class);
         var syncMeth = method.getAnnotation(Sync.class);
 
         return (asyncClass != null && syncMeth == null);
